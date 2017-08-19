@@ -15,13 +15,13 @@ class App extends Component {
             <Map
                 ref="map"
                 apiKey="AIzaSyAf8JaLhqgEtLIrKFOfGDZeLsXCyLw0oUU"
-                mapAddress={'New York, Park Avenue'}
+                position={'New York, Park Avenue'}
                 choosenStyle={0}
                 zoomControl={true}
                 draggableMap={true}
                 mapZoom={10}
                 onLoad={(p) => console.log(p)}
-                zoomChanged={(p) => console.log(p)} // 11
+                zoomChanged={(p) => console.log(p)}
                 onDnD={(p) => console.log(p)}
                 style={{
                     width: '60%',

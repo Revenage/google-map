@@ -4,7 +4,7 @@ import './map.css';
 import debounce from 'lodash-es/debounce';
 import  Promise from 'promise';
 
-const RELAUNCH_TIMEOUT = '300';
+const RELAUNCH_TIMEOUT = 300;
 
 function URLtoLatLng(url) {
 	if (url.indexOf('http') === -1) {
@@ -32,24 +32,71 @@ class Map extends Component {
 		lodedAPI: false
 	};
 
+	static onError(message) {
+		return message;
+	}
+
 	constructor(props) {
 		super(props);
 		this.drawMap = this.drawMap.bind(this);
 		this.setPosition = this.setPosition.bind(this);
 		this.updateMap = this.updateMap.bind(this);
 		this.onLoad = this.onLoad.bind(this);
+		this.onError = this.onError.bind(this);
 	}
 
 	componentDidMount() {
 		this.callMap();
 	}
 
-	setPosition(mapAddress = this.props.mapAddress, centration) {
-		setTimeout(() => {
-			if (~mapAddress.indexOf('/@')) {
-				this.setPositionFromURL(mapAddress, centration);
+	componentWillReceiveProps(nextProps) {
+		const {
+			mapStyle,
+			mapZoom,
+			position,
+			mapTypeId,
+			addressBubble,
+			draggableMap,
+			zoomControl
+		} = nextProps;
+
+		const { props } = this;
+		const { map, marker } = this.state;
+		if (mapStyle !== props.mapStyle) {
+			map.setOptions({ styles: mapStyle });
+		}
+		if (mapZoom !== props.mapZoom) {
+			map.setOptions({ zoom: mapZoom });
+		}
+		if (position !== props.position) {
+			Map.setPosition(position, true);
+		}
+		if (mapTypeId !== props.mapTypeId) {
+			const google = window.google;
+			map.setMapTypeId(google.maps.MapTypeId[mapTypeId]);
+		}
+		if (addressBubble !== props.addressBubble) {
+			if (!addressBubble) {
+				this.setPosition(position, true);
 			} else {
-				this.setPositionFromAddress(mapAddress, centration);
+				marker.setMap(null);
+			}
+		}
+		if (draggableMap !== props.draggableMap) {
+			map.setOptions({ draggable: draggableMap });
+		}
+
+		if (zoomControl !== props.zoomControl) {
+			map.setOptions({ zoomControl });
+		}
+	}
+
+	setPosition(position = this.props.position, centration) {
+		setTimeout(() => {
+			if (~position.indexOf('/@')) {
+				this.setPositionFromURL(position, centration);
+			} else {
+				this.setPositionFromAddress(position, centration);
 			}
 		})
 	}
@@ -94,14 +141,14 @@ class Map extends Component {
 							);
 						}
 					} else {
-						throw new Error(status);
+						this.onError(status);
 					}
 				} else {
-					throw new Error(status);
+					this.onError(status);
 				}
 			});
 		} else {
-			throw new Error('Google geocoder not loaded');
+			this.onError('Google geocoder not loaded');
 		}
 	}
 
@@ -143,7 +190,7 @@ class Map extends Component {
 					});
 					this.drawMap()
 				},
-				error => console.error('error' + error)
+				error => this.onError(error)
 			);
 	}
 
@@ -158,7 +205,7 @@ class Map extends Component {
 			zoomControl,
 			addressBubble,
 			mapTypeId: typeId,
-			mapAddress,
+			position,
 			markerIcon,
 			mapCenter,
 			mapStyle: styles
@@ -187,7 +234,7 @@ class Map extends Component {
 			map: Map
 		});
 
-		this.setPosition(mapAddress, !mapCenter);
+		this.setPosition(position, !mapCenter);
 
 		if (mapCenter) {
 			const { lat, lng } = mapCenter;
@@ -210,13 +257,18 @@ class Map extends Component {
 		const { onLoad, zoomChanged, onDnD } = this.props;
 		const {map, marker} = this.state;
 
-		map.addListener('zoom_changed', () => {
-			zoomChanged(map.getZoom());
-		});
+		if (zoomChanged) {
+			map.addListener('zoom_changed', () => {
+				zoomChanged(map.getZoom());
+			});
+		}
 
-		map.addListener('dragend', () => {
-			onDnD({ ...map.getCenter().toJSON() });
-		});
+		if (onDnD) {
+			map.addListener('dragend', () => {
+				onDnD({ ...map.getCenter().toJSON() });
+			});
+		}
+
 		onLoad({ map, marker });
 		return { map, marker }
 	}
@@ -259,15 +311,14 @@ Map.defaultProps = {
 	addressBubble: false,
 	draggableMap: false,
 	zoomControl: false,
-	mapAddress: '',
+	position: '', // Google map url or location
 	style: {
 		width: '100%',
 		height: '100%'
 	},
 	mapStyle: [], // https://snazzymaps.com
 	onLoad: () => {}, // { map, marker }
-	zoomChanged: () => {}, // 11
-	onDnD: () => {} // {lat: 40.862296454374366, lng: -73.4830018917969}
+	onError: () => {}, // error message
 };
 
 Map.propTypes = {
@@ -278,7 +329,7 @@ Map.propTypes = {
 	addressBubble: PropTypes.bool,
 	draggableMap: PropTypes.bool,
 	zoomControl: PropTypes.bool,
-	mapAddress: PropTypes.string,
+	position: PropTypes.string,
 	styles: PropTypes.object,
 	onLoad: PropTypes.func,
 	zoomChanged: PropTypes.func,
