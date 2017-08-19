@@ -42,7 +42,7 @@ class Map extends Component {
 		this.setPosition = this.setPosition.bind(this);
 		this.updateMap = this.updateMap.bind(this);
 		this.onLoad = this.onLoad.bind(this);
-		this.onError = this.onError.bind(this);
+		this.onError = Map.onError.bind(this);
 	}
 
 	componentDidMount() {
