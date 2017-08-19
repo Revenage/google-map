@@ -5,6 +5,12 @@ import debounce from 'lodash-es/debounce';
 import  Promise from 'promise';
 
 const RELAUNCH_TIMEOUT = 300;
+const MAP_TYPES = {
+	ROADMAP: 'ROADMAP',
+	SATELLITE: 'SATELLITE',
+	HYBRID: 'HYBRID',
+	TERRAIN: 'TERRAIN'
+};
 
 function URLtoLatLng(url) {
 	if (url.indexOf('http') === -1) {
@@ -22,6 +28,12 @@ function URLtoLatLng(url) {
 
 function getSource(apiKey) {
 	return `https://maps.googleapis.com/maps/api/js?key=${apiKey}&output=embed&libraries=places&language=en`
+}
+
+function getType(mapType) {
+	const google = window.google;
+	const type = MAP_TYPES[mapType];
+	return google.maps.MapTypeId[type];
 }
 
 class Map extends Component {
@@ -54,40 +66,43 @@ class Map extends Component {
 			mapStyle,
 			mapZoom,
 			position,
-			mapTypeId,
+			mapType,
 			addressBubble,
 			draggableMap,
 			zoomControl
 		} = nextProps;
 
+
+
 		const { props } = this;
 		const { map, marker } = this.state;
+		const { setOptions, setPosition, setMapTypeId } = map;
+		const { setMap } = marker;
 		if (mapStyle !== props.mapStyle) {
-			map.setOptions({ styles: mapStyle });
+			setOptions({ styles: mapStyle });
 		}
 		if (mapZoom !== props.mapZoom) {
-			map.setOptions({ zoom: mapZoom });
+			setOptions({ zoom: mapZoom });
 		}
 		if (position !== props.position) {
-			Map.setPosition(position, true);
+			setPosition(position, true);
 		}
-		if (mapTypeId !== props.mapTypeId) {
-			const google = window.google;
-			map.setMapTypeId(google.maps.MapTypeId[mapTypeId]);
+		if (mapType !== props.mapType) {
+			setMapTypeId(getType(mapType));
 		}
 		if (addressBubble !== props.addressBubble) {
 			if (!addressBubble) {
 				this.setPosition(position, true);
 			} else {
-				marker.setMap(null);
+				setMap(null);
 			}
 		}
 		if (draggableMap !== props.draggableMap) {
-			map.setOptions({ draggable: draggableMap });
+			setOptions({ draggable: draggableMap });
 		}
 
 		if (zoomControl !== props.zoomControl) {
-			map.setOptions({ zoomControl });
+			setOptions({ zoomControl });
 		}
 	}
 
@@ -204,19 +219,18 @@ class Map extends Component {
 			draggableMap: draggable,
 			zoomControl,
 			addressBubble,
-			mapTypeId: typeId,
+			mapTypeId: mapType,
 			position,
 			markerIcon,
 			mapCenter,
 			mapStyle: styles
 		} = props;
 
-		const mapTypeId = google.maps.MapTypeId[typeId];
 		const mapPref = {
 			zoom,
 			styles,
 			draggable,
-			mapTypeId,
+			mapTypeId: getType(mapType),
 			minZoom: 4,
 			maxZoom: 21,
 			zoomControl,
@@ -307,7 +321,7 @@ Map.defaultProps = {
 	apiKey: '',
 	markerIcon: 'https://1.bp.blogspot.com/_GZzKwf6g1o8/S6xwK6CSghI/AAAAAAAAA98/_iA3r4Ehclk/s1600/marker-green.png',
 	mapZoom: 15,
-	mapTypeId: 'ROADMAP',
+	mapType: MAP_TYPES.ROADMAP,
 	addressBubble: false,
 	draggableMap: false,
 	zoomControl: false,
