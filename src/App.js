@@ -20,6 +20,7 @@ class App extends Component {
                 zoomControl={true}
                 draggableMap={true}
                 mapZoom={10}
+				mapType='TERRAIN'
                 onLoad={(p) => console.log(p)}
                 zoomChanged={(p) => console.log(p)}
                 onDnD={(p) => console.log(p)}

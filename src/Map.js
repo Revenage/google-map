@@ -226,11 +226,13 @@ class Map extends Component {
 			mapStyle: styles
 		} = props;
 
+		console.log(mapType);
+
 		const mapPref = {
 			zoom,
 			styles,
 			draggable,
-			mapTypeId: getType(mapType),
+			mapTypeId: getType(mapType), //todo fix it
 			minZoom: 4,
 			maxZoom: 21,
 			zoomControl,
