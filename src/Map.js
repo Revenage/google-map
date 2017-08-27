@@ -13,7 +13,7 @@ const MAP_TYPES = {
 };
 
 function URLtoLatLng(url) {
-	if (url.indexOf('http') === -1) {
+	if (!~url.indexOf('http')) {
 		return {
 			lat: null,
 			lng: null
@@ -107,64 +107,50 @@ class Map extends Component {
 	}
 
 	setPosition(position = this.props.position, centration) {
-		setTimeout(() => {
-			if (~position.indexOf('/@')) {
-				this.setPositionFromURL(position, centration);
-			} else {
-				this.setPositionFromAddress(position, centration);
-			}
-		})
-	}
-
-	setPositionFromURL(url, centration) {
 		const { state, props } = this;
 		const { addressBubble } = props;
 		const { map } = state;
-		const { lat, lng } = URLtoLatLng(url);
-		const google = window.google;
 
-		if (centration) {
-			map.setCenter(new google.maps.LatLng(lat, lng));
-		}
-
-		if (!addressBubble) {
-			this.drawMarker(lat, lng);
-		}
+		this
+			.getPosition(position)
+			.then(location => {
+				if (centration) {
+					map.setCenter(location);
+				}
+				if (!addressBubble) {
+					this.drawMarker(
+						location.lat(),
+						location.lng()
+					);
+				}
+			})
+			.catch(err => this.onError('Google geocoder error ', err));
 	}
 
-	setPositionFromAddress(val, centration) {
-		const { state, props } = this;
-		const { addressBubble } = props;
-		const { map } = state;
+	getPosition(address='') {
 		const google = window.google;
 		const geocoder = new google.maps.Geocoder();
-		if (geocoder) {
-			geocoder.geocode({ address: val }, (results, status) => {
-				const { GeocoderStatus } = google.maps;
-				const { OK, ZERO_RESULTS } = GeocoderStatus;
-				if (status === OK) {
-					if (status !== ZERO_RESULTS) {
-						const { location } = results[0].geometry;
-
-						if (centration) {
-							map.setCenter(location);
+		return new Promise((resolve, reject) => {
+			if (address.includes('/@')) {
+				const location = new google.maps.LatLng(...URLtoLatLng(address))
+				resolve(location)
+			} else {
+				if (geocoder) {
+					geocoder.geocode({ address }, (results, status) => {
+						const { GeocoderStatus } = google.maps;
+						const { OK, ZERO_RESULTS } = GeocoderStatus;
+						if (status === OK && status !== ZERO_RESULTS) {
+								const { location } = results[0].geometry;
+								resolve(location)
+						} else {
+							reject(this.onError(status));
 						}
-						if (!addressBubble) {
-							this.drawMarker(
-								location.lat(),
-								location.lng()
-							);
-						}
-					} else {
-						this.onError(status);
-					}
+					});
 				} else {
-					this.onError(status);
+					reject(this.onError('Google geocoder not loaded'));
 				}
-			});
-		} else {
-			this.onError('Google geocoder not loaded');
-		}
+			}
+		});
 	}
 
 	callMap() {
@@ -221,12 +207,12 @@ class Map extends Component {
 			addressBubble,
 			mapTypeId: mapType,
 			position,
+			markerPosition,
 			markerIcon,
 			mapCenter,
+			fullscreenControl,
 			mapStyle: styles
 		} = props;
-
-		console.log(mapType);
 
 		const mapPref = {
 			zoom,
@@ -237,6 +223,7 @@ class Map extends Component {
 			maxZoom: 21,
 			zoomControl,
 			addressBubble,
+			fullscreenControl,
 			scrollwheel: false,
 			scaleControl: false,
 			mapTypeControl: false,
@@ -261,6 +248,13 @@ class Map extends Component {
 			map: Map,
 			icon: markerIcon
 		});
+
+		if (markerPosition) {
+			this
+			.getPosition(markerPosition)
+			.then(location => Marker.setPosition(location))
+
+		}
 
 		this.setState({
 			marker: Marker
@@ -290,11 +284,11 @@ class Map extends Component {
 	}
 
 	drawMarker(lat, lng) {
-		const google = window.google;
-		let latlng = new google.maps.LatLng(lat, lng);
 		let { props } = this;
 		let { map, marker } = this.state;
 		const { markerIcon } = props;
+		const google = window.google;
+		let latlng = new google.maps.LatLng(lat, lng);
 
 		if (!marker) {
 			marker = new google.maps.Marker({
@@ -308,18 +302,29 @@ class Map extends Component {
 	}
 
 	render() {
-		const { style } = this.props;
+		const { props } = this;
+		const { style, children } = props;
+
 		return (
-			<div
-				className="mapholder"
-				ref={ref => this.mapholder = ref}
-				style={style}
-			/>
+			<div className='google-map'>
+				<div
+					className="mapholder"
+					ref={ref => this.mapholder = ref}
+					style={style}
+				/>
+			{ children &&
+					<div className='content' ref={ref => this.content = ref}>
+						{children}
+					</div>
+				}
+			</div>
 		);
 	}
 }
 
 Map.defaultProps = {
+	position: '', // Google map url or location
+	markerPosition: null,
 	apiKey: '',
 	markerIcon: 'https://1.bp.blogspot.com/_GZzKwf6g1o8/S6xwK6CSghI/AAAAAAAAA98/_iA3r4Ehclk/s1600/marker-green.png',
 	mapZoom: 15,
@@ -327,7 +332,7 @@ Map.defaultProps = {
 	addressBubble: false,
 	draggableMap: false,
 	zoomControl: false,
-	position: '', // Google map url or location
+	fullscreenControl: true,
 	style: {
 		width: '100%',
 		height: '100%'
@@ -345,7 +350,9 @@ Map.propTypes = {
 	addressBubble: PropTypes.bool,
 	draggableMap: PropTypes.bool,
 	zoomControl: PropTypes.bool,
+	fullscreenControl: PropTypes.bool,
 	position: PropTypes.string,
+	markerPosition: PropTypes.string,
 	styles: PropTypes.object,
 	onLoad: PropTypes.func,
 	zoomChanged: PropTypes.func,
@@ -354,4 +361,3 @@ Map.propTypes = {
 };
 
 export default Map;
-

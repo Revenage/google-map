@@ -15,11 +15,13 @@ class App extends Component {
             <Map
                 ref="map"
                 apiKey="AIzaSyAf8JaLhqgEtLIrKFOfGDZeLsXCyLw0oUU"
-                position={'New York, Park Avenue'}
+                position={'Kiev, Lukianivska'}
+                markerPosition={'Kiev, Illinska St'}
                 choosenStyle={0}
                 zoomControl={true}
+                fullscreenControl={false}
                 draggableMap={true}
-                mapZoom={10}
+                mapZoom={13}
 				mapType='TERRAIN'
                 onLoad={(p) => console.log(p)}
                 zoomChanged={(p) => console.log(p)}
@@ -102,7 +104,9 @@ class App extends Component {
 						}
 					]
                 }
-            />
+            >
+                <div>Test</div>
+            </Map>
         </div>
       </div>
     );
